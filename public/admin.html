@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Admin — Tomás' Gallery</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <h1 class="site-title">Admin — Tomás' Gallery</h1>
+    <div class="accent-line"></div>
+  </header>
+
+  <main style="max-width:1100px; margin:20px auto; padding:0 16px;">
+    <section class="card">
+      <h2>Login</h2>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <input id="login-password" type="password" placeholder="Password" style="flex:1;">
+        <button id="login-btn">Log in</button>
+        <button id="logout-btn" style="display:none;">Log out</button>
+        <span id="login-msg" class="muted"></span>
+      </div>
+    </section>
+
+    <section class="card" style="margin-top:16px;">
+      <h2>Manage Categories</h2>
+      <div style="display:flex; gap:8px;">
+        <input id="new-cat" placeholder="New category name">
+        <button id="add-cat-btn">Add</button>
+      </div>
+      <ul id="cats-list" style="margin-top:12px;"></ul>
+      <p class="muted">Deleting moves paintings to "Uncategorized".</p>
+    </section>
+
+    <section class="card" style="margin-top:16px;">
+      <h2>Manage Paintings</h2>
+      <div id="admin-paintings-list" style="display:flex; flex-direction:column; gap:12px; margin-top:8px;"></div>
+    </section>
+  </main>
+
+  <script src="admin.js"></script>
+</body>
+</html>
