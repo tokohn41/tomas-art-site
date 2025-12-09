@@ -11,7 +11,6 @@ const PORT = process.env.PORT || 3000;
 // --- Middleware ---
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
 app.use(session({
   secret: process.env.SESSION_SECRET || "replace_this_secret",
   resave: false,
@@ -29,12 +28,8 @@ if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
 // --- Multer setup ---
 const storage = multer.diskStorage({
-  destination: function(req, file, cb) {
-    cb(null, uploadDir);
-  },
-  filename: function(req, file, cb) {
-    cb(null, Date.now() + path.extname(file.originalname));
-  }
+  destination: (req, file, cb) => cb(null, uploadDir),
+  filename: (req, file, cb) => cb(null, Date.now() + path.extname(file.originalname))
 });
 const upload = multer({ storage });
 
@@ -50,7 +45,6 @@ db.serialize(() => {
     materials TEXT,
     location TEXT,
     description TEXT,
-    category TEXT,
     image_filename TEXT
   )`);
 
@@ -58,6 +52,17 @@ db.serialize(() => {
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT UNIQUE
   )`);
+
+  // --- Add category column if it doesn't exist ---
+  db.get("PRAGMA table_info(paintings)", (err, info) => {
+    db.all("PRAGMA table_info(paintings)", (err, columns) => {
+      const hasCategory = columns.some(c => c.name === "category");
+      if (!hasCategory) {
+        db.run("ALTER TABLE paintings ADD COLUMN category TEXT DEFAULT 'Uncategorized'");
+        console.log("Added 'category' column to paintings table");
+      }
+    });
+  });
 });
 
 // --- Middleware to check admin ---
@@ -69,9 +74,7 @@ function requireAdmin(req, res, next) {
 // --- Routes ---
 
 // Check session
-app.get("/session", (req, res) => {
-  res.json({ isAdmin: !!req.session?.isAdmin });
-});
+app.get("/session", (req, res) => res.json({ isAdmin: !!req.session?.isAdmin }));
 
 // Admin login
 app.post("/login", (req, res) => {
@@ -85,14 +88,11 @@ app.post("/login", (req, res) => {
 
 // Admin logout
 app.post("/logout", (req, res) => {
-  req.session.destroy(err => {
-    res.json({ success: true });
-  });
+  req.session.destroy(err => res.json({ success: true }));
 });
 
 // --- Paintings ---
 
-// Get all paintings
 app.get("/paintings", (req, res) => {
   db.all("SELECT * FROM paintings ORDER BY date DESC", [], (err, rows) => {
     if(err) return res.status(500).json({ error: err.message });
@@ -100,7 +100,6 @@ app.get("/paintings", (req, res) => {
   });
 });
 
-// Add painting
 app.post("/paintings", requireAdmin, upload.single("image"), (req, res) => {
   if(!req.file) return res.status(400).json({ error: "Image required" });
   const { title, date, materials, location, description, category } = req.body;
@@ -116,7 +115,6 @@ app.post("/paintings", requireAdmin, upload.single("image"), (req, res) => {
   );
 });
 
-// Delete painting
 app.delete("/paintings/:id", requireAdmin, (req, res) => {
   const id = req.params.id;
   db.get("SELECT image_filename FROM paintings WHERE id=?", [id], (err, row) => {
@@ -132,7 +130,6 @@ app.delete("/paintings/:id", requireAdmin, (req, res) => {
 
 // --- Categories ---
 
-// Get categories
 app.get("/categories", (req, res) => {
   db.all("SELECT * FROM categories ORDER BY name ASC", [], (err, rows) => {
     if(err) return res.status(500).json({ error: err.message });
@@ -140,7 +137,6 @@ app.get("/categories", (req, res) => {
   });
 });
 
-// Add category
 app.post("/categories", requireAdmin, (req, res) => {
   const name = req.body.name?.trim();
   if(!name) return res.status(400).json({ error: "Name required" });
@@ -150,7 +146,6 @@ app.post("/categories", requireAdmin, (req, res) => {
   });
 });
 
-// Delete category
 app.delete("/categories/:id", requireAdmin, (req, res) => {
   const id = req.params.id;
   db.get("SELECT name FROM categories WHERE id=?", [id], (err, row) => {
@@ -165,16 +160,10 @@ app.delete("/categories/:id", requireAdmin, (req, res) => {
 });
 
 // --- Serve admin page ---
-app.get("/admin", (req, res) => {
-  res.sendFile(path.join(__dirname, "public/admin.html"));
-});
+app.get("/admin", (req, res) => res.sendFile(path.join(__dirname, "public/admin.html")));
 
 // --- Fallback route for gallery / SPA ---
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "public/index.html"));
-});
+app.get("*", (req, res) => res.sendFile(path.join(__dirname, "public/index.html")));
 
 // --- Start server ---
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
