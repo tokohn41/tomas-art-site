@@ -1,43 +1,43 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Admin — Tomás' Gallery</title>
-  <link rel="stylesheet" href="styles.css" />
+  <meta charset="UTF-8">
+  <title>Tomás Art Admin</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <header class="site-header">
-    <h1 class="site-title">Admin — Tomás' Gallery</h1>
-    <div class="accent-line"></div>
-  </header>
+  <h1>Admin Panel</h1>
 
-  <main style="max-width:1100px; margin:20px auto; padding:0 16px;">
-    <section class="card">
-      <h2>Login</h2>
-      <div style="display:flex; gap:8px; align-items:center;">
-        <input id="login-password" type="password" placeholder="Password" style="flex:1;">
-        <button id="login-btn">Log in</button>
-        <button id="logout-btn" style="display:none;">Log out</button>
-        <span id="login-msg" class="muted"></span>
-      </div>
-    </section>
+  <div id="loginDiv">
+    <h2>Login</h2>
+    <input type="password" id="password" placeholder="Admin password">
+    <button id="loginBtn">Login</button>
+    <p id="loginMsg"></p>
+  </div>
 
-    <section class="card" style="margin-top:16px;">
-      <h2>Manage Categories</h2>
-      <div style="display:flex; gap:8px;">
-        <input id="new-cat" placeholder="New category name">
-        <button id="add-cat-btn">Add</button>
-      </div>
-      <ul id="cats-list" style="margin-top:12px;"></ul>
-      <p class="muted">Deleting moves paintings to "Uncategorized".</p>
-    </section>
+  <div id="adminDiv" style="display:none;">
+    <button id="logoutBtn">Logout</button>
 
-    <section class="card" style="margin-top:16px;">
-      <h2>Manage Paintings</h2>
-      <div id="admin-paintings-list" style="display:flex; flex-direction:column; gap:12px; margin-top:8px;"></div>
-    </section>
-  </main>
+    <h2>Upload Painting</h2>
+    <form id="uploadForm">
+      <input type="text" name="title" placeholder="Title"><br>
+      <input type="text" name="date" placeholder="MM/DD/YYYY"><br>
+      <input type="text" name="materials" placeholder="Materials"><br>
+      <input type="text" name="location" placeholder="Current Location"><br>
+      <textarea name="description" placeholder="Description"></textarea><br>
+      <select name="category" id="categorySelect"></select><br>
+      <input type="file" name="image" id="imageInput"><br>
+      <button type="submit">Upload</button>
+    </form>
+
+    <h2>Paintings</h2>
+    <div id="paintingsList"></div>
+
+    <h2>Categories</h2>
+    <input type="text" id="newCategory" placeholder="New category name">
+    <button id="addCategoryBtn">Add Category</button>
+    <div id="categoriesList"></div>
+  </div>
 
   <script src="admin.js"></script>
 </body>
