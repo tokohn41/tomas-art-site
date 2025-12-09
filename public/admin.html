@@ -8,6 +8,7 @@
 <body>
   <h1>Admin Panel</h1>
 
+  <!-- Login Section -->
   <div id="loginDiv">
     <h2>Login</h2>
     <input type="password" id="password" placeholder="Admin password">
@@ -15,30 +16,35 @@
     <p id="loginMsg"></p>
   </div>
 
+  <!-- Admin Section -->
   <div id="adminDiv" style="display:none;">
     <button id="logoutBtn">Logout</button>
 
+    <!-- Upload Painting -->
     <h2>Upload Painting</h2>
     <form id="uploadForm">
-      <input type="text" name="title" placeholder="Title"><br>
-      <input type="text" name="date" placeholder="MM/DD/YYYY"><br>
+      <input type="text" name="title" placeholder="Title" required><br>
+      <input type="text" name="date" placeholder="MM/DD/YYYY" required><br>
       <input type="text" name="materials" placeholder="Materials"><br>
       <input type="text" name="location" placeholder="Current Location"><br>
       <textarea name="description" placeholder="Description"></textarea><br>
       <select name="category" id="categorySelect"></select><br>
-      <input type="file" name="image" id="imageInput"><br>
+      <input type="file" name="image" id="imageInput" required><br>
       <button type="submit">Upload</button>
     </form>
 
+    <!-- Paintings List -->
     <h2>Paintings</h2>
     <div id="paintingsList"></div>
 
+    <!-- Categories Management -->
     <h2>Categories</h2>
     <input type="text" id="newCategory" placeholder="New category name">
     <button id="addCategoryBtn">Add Category</button>
     <div id="categoriesList"></div>
   </div>
 
+  <!-- Load JS after all HTML elements -->
   <script src="admin.js"></script>
 </body>
 </html>
