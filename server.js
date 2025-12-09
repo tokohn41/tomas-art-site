@@ -90,6 +90,8 @@ app.post("/logout", (req, res) => {
   });
 });
 
+// --- Paintings ---
+
 // Get all paintings
 app.get("/paintings", (req, res) => {
   db.all("SELECT * FROM paintings ORDER BY date DESC", [], (err, rows) => {
@@ -98,7 +100,7 @@ app.get("/paintings", (req, res) => {
   });
 });
 
-// Add new painting
+// Add painting
 app.post("/paintings", requireAdmin, upload.single("image"), (req, res) => {
   if(!req.file) return res.status(400).json({ error: "Image required" });
   const { title, date, materials, location, description, category } = req.body;
@@ -128,6 +130,8 @@ app.delete("/paintings/:id", requireAdmin, (req, res) => {
   });
 });
 
+// --- Categories ---
+
 // Get categories
 app.get("/categories", (req, res) => {
   db.all("SELECT * FROM categories ORDER BY name ASC", [], (err, rows) => {
@@ -152,7 +156,6 @@ app.delete("/categories/:id", requireAdmin, (req, res) => {
   db.get("SELECT name FROM categories WHERE id=?", [id], (err, row) => {
     if(err || !row) return res.status(404).json({ error: "Not found" });
     const catName = row.name;
-    // Move paintings to Uncategorized
     db.run("UPDATE paintings SET category='Uncategorized' WHERE category=?", [catName]);
     db.run("DELETE FROM categories WHERE id=?", [id], err => {
       if(err) return res.status(500).json({ error: err.message });
@@ -161,7 +164,12 @@ app.delete("/categories/:id", requireAdmin, (req, res) => {
   });
 });
 
-// Fallback route for client-side routing
+// --- Serve admin page ---
+app.get("/admin", (req, res) => {
+  res.sendFile(path.join(__dirname, "public/admin.html"));
+});
+
+// --- Fallback route for gallery / SPA ---
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "public/index.html"));
 });
