@@ -1,170 +1,123 @@
-// admin.js - login / logout / categories / painting manager
-const loginBtn = document.getElementById("login-btn");
-const logoutBtn = document.getElementById("logout-btn");
-const loginMsg = document.getElementById("login-msg");
-const loginPassword = document.getElementById("login-password");
+const loginDiv = document.getElementById("loginDiv");
+const adminDiv = document.getElementById("adminDiv");
+const loginBtn = document.getElementById("loginBtn");
+const logoutBtn = document.getElementById("logoutBtn");
+const loginMsg = document.getElementById("loginMsg");
 
-const newCatInput = document.getElementById("new-cat");
-const addCatBtn = document.getElementById("add-cat-btn");
-const catsList = document.getElementById("cats-list");
+const uploadForm = document.getElementById("uploadForm");
+const paintingsList = document.getElementById("paintingsList");
+const categorySelect = document.getElementById("categorySelect");
+const categoriesList = document.getElementById("categoriesList");
+const newCategory = document.getElementById("newCategory");
+const addCategoryBtn = document.getElementById("addCategoryBtn");
 
-const adminPaintingsList = document.getElementById("admin-paintings-list");
+// --- Check session on load ---
+fetch("/session").then(res => res.json()).then(data => {
+  if(data.isAdmin) showAdmin();
+});
 
-async function checkSession() {
-  const s = await (await fetch("/session", { credentials: "include" })).json();
-  return s.isAdmin;
-}
-
-async function refreshCats() {
-  const res = await fetch("/categories");
-  const cats = await res.json();
-  catsList.innerHTML = "";
-  cats.forEach(c => {
-    const li = document.createElement("li");
-    li.style.marginBottom = "8px";
-    li.innerHTML = `
-      <span style="display:inline-block; width:200px;">${c.name}</span>
-      <button data-id="${c.id}" class="rename">Rename</button>
-      <button data-id="${c.id}" class="delete">Delete</button>
-    `;
-    catsList.appendChild(li);
-  });
-
-  document.querySelectorAll(".rename").forEach(b => b.onclick = async (e) => {
-    const id = e.target.dataset.id;
-    const newName = prompt("New name:");
-    if (!newName) return;
-    const res = await fetch(`/categories/${id}`, {
-      method: "PUT",
-      headers: {"Content-Type":"application/json"},
-      body: JSON.stringify({ name: newName }),
-      credentials: "include"
-    });
-    if (res.ok) refreshCats(); else alert("Rename failed");
-  });
-
-  document.querySelectorAll(".delete").forEach(b => b.onclick = async (e) => {
-    const id = e.target.dataset.id;
-    if (!confirm("Delete this category? Paintings will be moved to 'Uncategorized'")) return;
-    const res = await fetch(`/categories/${id}`, { method: "DELETE", credentials: "include" });
-    if (res.ok) refreshCats(); else alert("Delete failed");
-  });
-}
-
-async function refreshPaintings() {
-  const res = await fetch("/paintings");
-  const paints = await res.json();
-  adminPaintingsList.innerHTML = "";
-  paints.forEach(p => {
-    const div = document.createElement("div");
-    div.style.display = "flex";
-    div.style.alignItems = "center";
-    div.style.gap = "12px";
-    div.innerHTML = `
-      <img src="/uploads/${p.image_filename}" style="width:80px;height:60px;object-fit:cover;border-radius:6px;">
-      <div style="flex:1;">
-        <div style="font-weight:600;">${p.title || "Untitled"}</div>
-        <div style="font-size:12px;color:#666;">${p.category || ""}</div>
-      </div>
-      <button data-id="${p.id}" class="edit">Edit</button>
-      <button data-id="${p.id}" class="del danger">Delete</button>
-    `;
-    adminPaintingsList.appendChild(div);
-  });
-
-  document.querySelectorAll(".del").forEach(b => b.onclick = async (e) => {
-    const id = e.target.dataset.id;
-    if (!confirm("Delete this painting?")) return;
-    const res = await fetch(`/paintings/${id}`, { method: "DELETE", credentials: "include" });
-    if (res.ok) refreshPaintings(); else alert("Delete failed");
-  });
-
-  document.querySelectorAll(".edit").forEach(b => b.onclick = async (e) => {
-    const id = e.target.dataset.id;
-    // fetch painting details
-    const res = await fetch("/paintings");
-    const list = await res.json();
-    const p = list.find(x => x.id == id);
-    if (!p) return alert("Not found");
-    const title = prompt("Title:", p.title || "");
-    if (title === null) return;
-    const date = prompt("Date (MM/DD/YYYY):", p.date || "");
-    if (date === null) return;
-    const materials = prompt("Materials:", p.materials || "");
-    if (materials === null) return;
-    const location = prompt("Location:", p.location || "");
-    if (location === null) return;
-    const description = prompt("Description:", p.description || "");
-    if (description === null) return;
-    const category = prompt("Category:", p.category || "Uncategorized");
-    if (category === null) return;
-
-    const upd = await fetch(`/paintings/${id}`, {
-      method: "PUT",
-      headers: {"Content-Type":"application/json"},
-      credentials: "include",
-      body: JSON.stringify({ title, date, materials, location, description, category })
-    });
-    if (upd.ok) refreshPaintings(); else alert("Update failed");
-  });
-}
-
-// login/logout
-loginBtn.onclick = async () => {
-  const pw = loginPassword.value;
+// --- Login ---
+loginBtn.addEventListener("click", async () => {
+  const password = document.getElementById("password").value;
   const res = await fetch("/login", {
     method: "POST",
-    headers: {"Content-Type":"application/json"},
-    credentials: "include",
-    body: JSON.stringify({ password: pw })
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ password })
   });
-  if (res.ok) {
-    loginMsg.textContent = "Logged in";
-    loginBtn.style.display = "none";
-    logoutBtn.style.display = "inline-block";
-    refreshCats();
-    refreshPaintings();
-  } else {
-    loginMsg.textContent = "Wrong password";
-  }
-};
+  if(res.ok) showAdmin();
+  else loginMsg.textContent = "Invalid password";
+});
 
-logoutBtn.onclick = async () => {
-  await fetch("/logout", { method: "POST", credentials: "include" });
-  loginMsg.textContent = "Logged out";
-  loginBtn.style.display = "inline-block";
-  logoutBtn.style.display = "none";
-};
+// --- Logout ---
+logoutBtn.addEventListener("click", async () => {
+  await fetch("/logout", { method: "POST" });
+  adminDiv.style.display = "none";
+  loginDiv.style.display = "block";
+});
 
-// add category
-addCatBtn.onclick = async () => {
-  const name = newCatInput.value.trim();
-  if (!name) return alert("Type a category name");
+// --- Show admin panel ---
+function showAdmin() {
+  loginDiv.style.display = "none";
+  adminDiv.style.display = "block";
+  loadPaintings();
+  loadCategories();
+}
+
+// --- Upload painting ---
+uploadForm.addEventListener("submit", async e => {
+  e.preventDefault();
+  const formData = new FormData(uploadForm);
+  const res = await fetch("/paintings", { method:"POST", body: formData });
+  const data = await res.json();
+  if(res.ok) {
+    alert("Painting uploaded!");
+    uploadForm.reset();
+    loadPaintings();
+  } else alert(data.error || "Upload failed");
+});
+
+// --- Load paintings ---
+async function loadPaintings() {
+  paintingsList.innerHTML = "";
+  const res = await fetch("/paintings");
+  const paintings = await res.json();
+  paintings.forEach(p => {
+    const div = document.createElement("div");
+    div.innerHTML = `
+      <b>${p.title}</b> (${p.date}) - ${p.category} <br>
+      <img src="uploads/${p.image_filename}" style="max-width:150px"><br>
+      <button onclick="deletePainting(${p.id})">Delete</button>
+      <hr>
+    `;
+    paintingsList.appendChild(div);
+  });
+}
+
+// --- Delete painting ---
+async function deletePainting(id) {
+  if(!confirm("Delete this painting?")) return;
+  const res = await fetch(`/paintings/${id}`, { method: "DELETE" });
+  if(res.ok) loadPaintings();
+  else alert("Delete failed");
+}
+
+// --- Load categories ---
+async function loadCategories() {
+  categorySelect.innerHTML = "";
+  categoriesList.innerHTML = "";
+  const res = await fetch("/categories");
+  const cats = await res.json();
+  cats.forEach(c => {
+    const opt = document.createElement("option");
+    opt.value = c.name;
+    opt.textContent = c.name;
+    categorySelect.appendChild(opt);
+
+    const div = document.createElement("div");
+    div.innerHTML = `${c.name} <button onclick="deleteCategory(${c.id})">Delete</button>`;
+    categoriesList.appendChild(div);
+  });
+}
+
+// --- Add category ---
+addCategoryBtn.addEventListener("click", async () => {
+  const name = newCategory.value.trim();
+  if(!name) return;
   const res = await fetch("/categories", {
-    method: "POST",
-    headers: {"Content-Type":"application/json"},
-    credentials: "include",
+    method:"POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name })
   });
-  if (res.ok) {
-    newCatInput.value = "";
-    refreshCats();
-  } else {
-    const j = await res.json().catch(()=>({}));
-    alert("Failed: " + (j.error || "unknown"));
-  }
-};
+  if(res.ok) {
+    newCategory.value = "";
+    loadCategories();
+  } else alert("Failed to add category");
+});
 
-// initial
-(async () => {
-  const admin = await checkSession();
-  if (!admin) {
-    loginBtn.style.display = "inline-block";
-    logoutBtn.style.display = "none";
-  } else {
-    loginBtn.style.display = "none";
-    logoutBtn.style.display = "inline-block";
-    refreshCats();
-    refreshPaintings();
-  }
-})();
+// --- Delete category ---
+async function deleteCategory(id) {
+  if(!confirm("Delete this category? All paintings will move to Uncategorized.")) return;
+  const res = await fetch(`/categories/${id}`, { method:"DELETE" });
+  if(res.ok) loadCategories();
+  else alert("Failed to delete category");
+}
