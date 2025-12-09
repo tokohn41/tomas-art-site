@@ -79,7 +79,7 @@ app.get("/session", (req, res) => res.json({ isAdmin: !!req.session?.isAdmin }))
 // Admin login
 app.post("/login", (req, res) => {
   const password = req.body.password;
-  if (password === process.env.ADMIN_PASSWORD || password === "cotopaxi") {
+  if (process.env.ADMIN_PASSWORD && password === process.env.ADMIN_PASSWORD) {
     req.session.isAdmin = true;
     return res.json({ success: true });
   }
