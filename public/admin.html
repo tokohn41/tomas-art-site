@@ -2,170 +2,144 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Admin Panel - Tomás Art Site</title>
+  <title>Admin – Art by Tomás</title>
   <style>
-    body { font-family: Arial; max-width: 800px; margin: 0 auto; padding: 20px; }
-    input, select, button { margin: 5px 0; padding: 5px; width: 100%; }
-    img { max-width: 150px; max-height: 150px; display: block; margin-bottom: 5px; }
-    .painting { border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: auto;
+      padding: 20px;
+    }
+    input, textarea, button {
+      width: 100%;
+      margin: 5px 0;
+      padding: 8px;
+    }
+    img {
+      max-width: 120px;
+      display: block;
+      margin-bottom: 5px;
+    }
+    .painting {
+      border: 1px solid #ccc;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+    #adminArea {
+      display: none;
+    }
   </style>
 </head>
 <body>
-  <h1>Admin Panel</h1>
 
-  <!-- Login -->
-  <div id="loginDiv">
-    <h2>Login</h2>
-    <input type="password" id="adminPassword" placeholder="Enter admin password" />
-    <button onclick="login()">Login</button>
-    <p id="loginMsg" style="color:red;"></p>
-  </div>
+<h1>Admin Panel</h1>
 
-  <!-- Admin content -->
-  <div id="adminContent" style="display:none;">
-    <h2>Add Painting</h2>
-    <form id="uploadForm">
-      <input type="text" name="title" placeholder="Title" required />
-      <input type="text" name="date" placeholder="MM/DD/YYYY" required />
-      <input type="text" name="materials" placeholder="Materials" />
-      <input type="text" name="location" placeholder="Current Location" />
-      <textarea name="description" placeholder="Description"></textarea>
-      <input type="text" name="category" placeholder="Category (e.g., Oil, Watercolor)" />
-      <input type="file" name="image" accept="image/*" required />
-      <button type="submit">Upload</button>
-    </form>
+<!-- LOGIN -->
+<div id="loginArea">
+  <p>Enter admin password:</p>
+  <input type="password" id="password">
+  <button id="loginBtn">Login</button>
+  <p id="loginMsg" style="color:red;"></p>
+</div>
 
-    <h2>Manage Paintings</h2>
-    <div id="paintingsList"></div>
-  </div>
+<!-- ADMIN -->
+<div id="adminArea">
 
-  <script>
-    let adminPassword = "";
+  <h2>Add Painting</h2>
+  <form id="uploadForm">
+    <input name="title" placeholder="Title" required>
+    <input name="date" placeholder="MM/DD/YYYY" required>
+    <input name="materials" placeholder="Materials">
+    <input name="location" placeholder="Current location">
+    <input name="category" placeholder="Category (Oil, Watercolor, etc)">
+    <textarea name="description" placeholder="Description"></textarea>
+    <input type="file" name="image" accept="image/*" required>
+    <button type="submit">Upload Painting</button>
+  </form>
 
-    function login() {
-      const pw = document.getElementById("adminPassword").value;
-      adminPassword = pw;
-      // Test login by fetching paintings with admin header
-      fetch('/paintings', {
-        headers: { 'x-admin-password': adminPassword }
-      }).then(res => {
-        if(res.status === 200) {
-          document.getElementById("loginDiv").style.display = "none";
-          document.getElementById("adminContent").style.display = "block";
-          loadPaintings();
-        } else {
-          document.getElementById("loginMsg").innerText = "Incorrect password";
-        }
-      }).catch(() => {
-        document.getElementById("loginMsg").innerText = "Cannot connect";
-      });
-    }
+  <h2>Existing Paintings</h2>
+  <div id="paintings"></div>
 
-    // Upload painting
-    document.getElementById("uploadForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const formData = new FormData(e.target);
-      formData.append("password", adminPassword);
+</div>
 
-      const res = await fetch("/paintings", {
-        method: "POST",
-        body: formData
-      });
-      if(res.ok) {
-        e.target.reset();
-        loadPaintings();
-      } else {
-        alert("Upload failed"+text);
-      }
-    });
+<script>
+let ADMIN_PASSWORD = "";
 
-    // Load paintings
-    async function loadPaintings() {
-      const res = await fetch("/paintings");
-      const data = await res.json();
-      const container = document.getElementById("paintingsList");
-      container.innerHTML = "";
+// LOGIN
+document.getElementById("loginBtn").onclick = () => {
+  const pw = document.getElementById("password").value;
+  if (!pw) {
+    document.getElementById("loginMsg").innerText = "Enter a password.";
+    return;
+  }
+  ADMIN_PASSWORD = pw;
+  document.getElementById("loginArea").style.display = "none";
+  document.getElementById("adminArea").style.display = "block";
+  loadPaintings();
+};
 
-      data.forEach(p => {
-        const div = document.createElement("div");
-        div.className = "painting";
-        div.innerHTML = `
-          <img src="${p.image_filename}" alt="${p.title}" />
-          <strong>${p.title}</strong><br/>
-          ${p.date} | ${p.materials} | ${p.category}<br/>
-          <button onclick="deletePainting(${p.id})">Delete</button>
-        `;
-        container.appendChild(div);
-      });
-    }
+// UPLOAD
+document.getElementById("uploadForm").onsubmit = async (e) => {
+  e.preventDefault();
 
-    // Delete painting
-    async function deletePainting(id) {
-      if(!confirm("Are you sure you want to delete this painting?")) return;
-      const res = await fetch(`/paintings/${id}`, {
-        method: "DELETE",
-        headers: { "x-admin-password": adminPassword }
-      });
-      if(res.ok) loadPaintings();
-      else alert("Delete failed");
-    }
-  <script>
-document.addEventListener("DOMContentLoaded", () => {
+  const formData = new FormData(e.target);
+  formData.append("password", ADMIN_PASSWORD);
 
-  let adminPassword = "";
+  const res = await fetch("/paintings", {
+    method: "POST",
+    body: formData
+  });
 
-  window.login = function () {
-    adminPassword = document.getElementById("adminPassword").value;
-    if (!adminPassword) {
-      alert("Enter password");
-      return;
-    }
+  if (!res.ok) {
+    const msg = await res.text();
+    alert("Upload failed: " + msg);
+    return;
+  }
 
-    document.getElementById("loginDiv").style.display = "none";
-    document.getElementById("adminContent").style.display = "block";
-    loadPaintings();
-  };
+  alert("Painting uploaded.");
+  e.target.reset();
+  loadPaintings();
+};
 
-  const form = document.getElementById("uploadForm");
+// LOAD PAINTINGS
+async function loadPaintings() {
+  const res = await fetch("/paintings");
+  const data = await res.json();
+  const container = document.getElementById("paintings");
+  container.innerHTML = "";
 
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
+  data.forEach(p => {
+    const div = document.createElement("div");
+    div.className = "painting";
+    div.innerHTML = `
+      <img src="${p.image_filename}">
+      <strong>${p.title}</strong><br>
+      ${p.date} – ${p.category}<br><br>
+      <button onclick="deletePainting(${p.id})">Delete</button>
+    `;
+    container.appendChild(div);
+  });
+}
 
-    const formData = new FormData(form);
-    formData.append("password", adminPassword);
+// DELETE
+async function deletePainting(id) {
+  if (!confirm("Delete this painting?")) return;
 
-    const res = await fetch("/paintings", {
-      method: "POST",
-      body: formData
-    });
-
-    if (res.ok) {
-      alert("Uploaded!");
-      form.reset();
-      loadPaintings();
-    } else {
-      const msg = await res.text();
-      alert("Upload failed: " + msg);
+  const res = await fetch("/paintings/" + id, {
+    method: "DELETE",
+    headers: {
+      "x-admin-password": ADMIN_PASSWORD
     }
   });
 
-  async function loadPaintings() {
-    const res = await fetch("/paintings");
-    const data = await res.json();
-    const list = document.getElementById("paintingsList");
-    list.innerHTML = "";
-
-    data.forEach(p => {
-      const div = document.createElement("div");
-      div.innerHTML = `
-        <img src="${p.image_filename}" style="max-width:150px;"><br>
-        ${p.title}
-      `;
-      list.appendChild(div);
-    });
+  if (!res.ok) {
+    const msg = await res.text();
+    alert("Delete failed: " + msg);
+    return;
   }
 
-});
+  loadPaintings();
+}
 </script>
 
 </body>
