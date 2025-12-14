@@ -38,8 +38,7 @@ app.use(express.static(path.join(__dirname, "public")));
 app.get("/", (req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
 app.get("/admin.html", (req, res) => res.sendFile(path.join(__dirname, "public", "admin.html")));
 
-// --- Upload painting route ---
-// NOTE: multer runs first to parse req.body and req.file
+// --- Upload painting ---
 app.post("/paintings", upload.single("image"), (req, res, next) => {
   const pw = req.body.password || req.headers["x-admin-password"];
   if (pw === ADMIN_PASSWORD) return next();
@@ -47,15 +46,14 @@ app.post("/paintings", upload.single("image"), (req, res, next) => {
 }, (req, res) => {
   if (!req.file) return res.status(400).send("No file uploaded");
 
-  const { title, date, materials, location, description, category } = req.body;
-  const cat = category?.trim() || "Uncategorized";
+  const { title, date, materials, location, description } = req.body;
   const image_url = req.file.path;
   const public_id = req.file.filename;
 
   db.run(
-    `INSERT INTO paintings(title,date,materials,location,description,category,image_filename,cloudinary_id)
-     VALUES(?,?,?,?,?,?,?,?)`,
-    [title || "", date || "", materials || "", location || "", description || "", cat, image_url, public_id],
+    `INSERT INTO paintings(title,date,materials,location,description,image_filename,cloudinary_id)
+     VALUES(?,?,?,?,?,?,?)`,
+    [title || "", date || "", materials || "", location || "", description || "", image_url, public_id],
     function(err) {
       if (err) return res.status(500).send(err.message);
       res.send("OK");
