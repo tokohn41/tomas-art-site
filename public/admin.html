@@ -109,6 +109,64 @@
       if(res.ok) loadPaintings();
       else alert("Delete failed");
     }
-  </script>
+  <script>
+document.addEventListener("DOMContentLoaded", () => {
+
+  let adminPassword = "";
+
+  window.login = function () {
+    adminPassword = document.getElementById("adminPassword").value;
+    if (!adminPassword) {
+      alert("Enter password");
+      return;
+    }
+
+    document.getElementById("loginDiv").style.display = "none";
+    document.getElementById("adminContent").style.display = "block";
+    loadPaintings();
+  };
+
+  const form = document.getElementById("uploadForm");
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const formData = new FormData(form);
+    formData.append("password", adminPassword);
+
+    const res = await fetch("/paintings", {
+      method: "POST",
+      body: formData
+    });
+
+    if (res.ok) {
+      alert("Uploaded!");
+      form.reset();
+      loadPaintings();
+    } else {
+      const msg = await res.text();
+      alert("Upload failed: " + msg);
+    }
+  });
+
+  async function loadPaintings() {
+    const res = await fetch("/paintings");
+    const data = await res.json();
+    const list = document.getElementById("paintingsList");
+    list.innerHTML = "";
+
+    data.forEach(p => {
+      const div = document.createElement("div");
+      div.innerHTML = `
+        <img src="${p.image_filename}" style="max-width:150px;"><br>
+        ${p.title}
+      `;
+      list.appendChild(div);
+    });
+  }
+
+});
+</script>
+
 </body>
 </html>
