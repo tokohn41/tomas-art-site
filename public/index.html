@@ -37,14 +37,13 @@ async function loadPaintings() {
 function displayPaintings(paintings) {
   const gallery = document.getElementById("gallery");
   gallery.innerHTML = "";
-
   paintings.forEach(p => {
     const div = document.createElement("div");
     div.className = "painting";
     div.innerHTML = `
       <img src="${p.image_filename}" alt="${p.title}" onclick="showLightbox('${p.image_filename}')">
       <strong>${p.title}</strong><br>
-      ${p.date} - ${p.category || ""}
+      ${p.date || ""} 
     `;
     gallery.appendChild(div);
   });
@@ -57,7 +56,6 @@ function showLightbox(src) {
   lightbox.style.display = "flex";
 }
 
-// Search
 document.getElementById("search").addEventListener("input", async (e) => {
   const allPaintings = await loadPaintings();
   const q = e.target.value.toLowerCase();
@@ -69,7 +67,6 @@ document.getElementById("search").addEventListener("input", async (e) => {
   displayPaintings(filtered);
 });
 
-// Initial load
 loadPaintings().then(displayPaintings);
 </script>
 
