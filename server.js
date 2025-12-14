@@ -34,23 +34,17 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "public")));
 
-// --- Admin middleware ---
-function requireAdmin(req, res, next) {
-  const pw = req.body.password || req.headers["x-admin-password"];
-  if (pw === ADMIN_PASSWORD) next();
-  else res.status(401).send("Not authorized");
-}
-
-// --- Routes ---
-
-// Home page
+// --- Serve pages ---
 app.get("/", (req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
-
-// Admin page
 app.get("/admin.html", (req, res) => res.sendFile(path.join(__dirname, "public", "admin.html")));
 
-// Upload painting
-app.post("/paintings", requireAdmin, upload.single("image"), (req, res) => {
+// --- Upload painting route ---
+// NOTE: multer runs first to parse req.body and req.file
+app.post("/paintings", upload.single("image"), (req, res, next) => {
+  const pw = req.body.password || req.headers["x-admin-password"];
+  if (pw === ADMIN_PASSWORD) return next();
+  else return res.status(401).send("Not authorized");
+}, (req, res) => {
   if (!req.file) return res.status(400).send("No file uploaded");
 
   const { title, date, materials, location, description, category } = req.body;
@@ -69,7 +63,7 @@ app.post("/paintings", requireAdmin, upload.single("image"), (req, res) => {
   );
 });
 
-// Get all paintings
+// --- Get all paintings ---
 app.get("/paintings", (req, res) => {
   db.all("SELECT * FROM paintings ORDER BY date DESC", [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
@@ -77,8 +71,12 @@ app.get("/paintings", (req, res) => {
   });
 });
 
-// Delete painting
-app.delete("/paintings/:id", requireAdmin, (req, res) => {
+// --- Delete painting ---
+app.delete("/paintings/:id", upload.none(), (req, res, next) => {
+  const pw = req.headers["x-admin-password"] || req.body.password;
+  if (pw === ADMIN_PASSWORD) return next();
+  else return res.status(401).send("Not authorized");
+}, (req, res) => {
   const id = req.params.id;
   db.get("SELECT cloudinary_id FROM paintings WHERE id = ?", [id], (err, row) => {
     if (err || !row) return res.status(404).json({ error: "Painting not found" });
@@ -94,6 +92,6 @@ app.delete("/paintings/:id", requireAdmin, (req, res) => {
   });
 });
 
-// Start server
+// --- Start server ---
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
