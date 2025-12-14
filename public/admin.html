@@ -2,48 +2,29 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Admin – Art by Tomás</title>
+  <title>Admin – Tomás’ Art Gallery</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      max-width: 800px;
-      margin: auto;
-      padding: 20px;
-    }
-    input, textarea, button {
-      width: 100%;
-      margin: 5px 0;
-      padding: 8px;
-    }
-    img {
-      max-width: 120px;
-      display: block;
-      margin-bottom: 5px;
-    }
-    .painting {
-      border: 1px solid #ccc;
-      padding: 10px;
-      margin-bottom: 10px;
-    }
-    #adminArea {
-      display: none;
-    }
+    body { font-family: Arial, sans-serif; max-width: 800px; margin: auto; padding: 20px; }
+    h1 { text-align: center; }
+    input, textarea, button { width: 100%; margin: 5px 0; padding: 8px; }
+    img { max-width: 120px; display: block; margin-bottom: 5px; }
+    .painting { border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
+    #adminContent { display: none; }
   </style>
 </head>
 <body>
 
 <h1>Admin Panel</h1>
 
-<!-- LOGIN -->
+<!-- Login -->
 <div id="loginArea">
-  <p>Enter admin password:</p>
-  <input type="password" id="password">
+  <input type="password" id="adminPassword" placeholder="Enter admin password">
   <button id="loginBtn">Login</button>
   <p id="loginMsg" style="color:red;"></p>
 </div>
 
-<!-- ADMIN -->
-<div id="adminArea">
+<!-- Admin Content -->
+<div id="adminContent">
 
   <h2>Add Painting</h2>
   <form id="uploadForm">
@@ -58,32 +39,30 @@
   </form>
 
   <h2>Existing Paintings</h2>
-  <div id="paintings"></div>
+  <div id="paintingsList"></div>
 
 </div>
 
 <script>
-let ADMIN_PASSWORD = "";
+let adminPassword = "";
 
-// LOGIN
 document.getElementById("loginBtn").onclick = () => {
-  const pw = document.getElementById("password").value;
+  const pw = document.getElementById("adminPassword").value;
   if (!pw) {
-    document.getElementById("loginMsg").innerText = "Enter a password.";
+    document.getElementById("loginMsg").innerText = "Enter password.";
     return;
   }
-  ADMIN_PASSWORD = pw;
+  adminPassword = pw;
   document.getElementById("loginArea").style.display = "none";
-  document.getElementById("adminArea").style.display = "block";
+  document.getElementById("adminContent").style.display = "block";
   loadPaintings();
 };
 
-// UPLOAD
+// Upload painting
 document.getElementById("uploadForm").onsubmit = async (e) => {
   e.preventDefault();
-
   const formData = new FormData(e.target);
-  formData.append("password", ADMIN_PASSWORD);
+  formData.append("password", adminPassword);
 
   const res = await fetch("/paintings", {
     method: "POST",
@@ -101,35 +80,33 @@ document.getElementById("uploadForm").onsubmit = async (e) => {
   loadPaintings();
 };
 
-// LOAD PAINTINGS
+// Load paintings
 async function loadPaintings() {
   const res = await fetch("/paintings");
   const data = await res.json();
-  const container = document.getElementById("paintings");
+  const container = document.getElementById("paintingsList");
   container.innerHTML = "";
 
   data.forEach(p => {
     const div = document.createElement("div");
     div.className = "painting";
     div.innerHTML = `
-      <img src="${p.image_filename}">
+      <img src="${p.image_filename}" alt="${p.title}">
       <strong>${p.title}</strong><br>
-      ${p.date} – ${p.category}<br><br>
+      ${p.date} – ${p.category || ""}<br>
       <button onclick="deletePainting(${p.id})">Delete</button>
     `;
     container.appendChild(div);
   });
 }
 
-// DELETE
+// Delete painting
 async function deletePainting(id) {
   if (!confirm("Delete this painting?")) return;
 
   const res = await fetch("/paintings/" + id, {
     method: "DELETE",
-    headers: {
-      "x-admin-password": ADMIN_PASSWORD
-    }
+    headers: { "x-admin-password": adminPassword }
   });
 
   if (!res.ok) {
