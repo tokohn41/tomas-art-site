@@ -3,10 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <title>Admin – Tomás’ Art Gallery</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
   <style>
-    body { font-family: Arial, sans-serif; max-width: 800px; margin: auto; padding: 20px; }
+    body { font-family: 'Roboto', sans-serif; max-width: 800px; margin: auto; padding: 20px; }
     h1 { text-align: center; }
-    input, textarea, button { width: 100%; margin: 5px 0; padding: 8px; }
+    input, textarea, button { width: 100%; margin: 5px 0; padding: 8px; font-size: 14px; }
     img { max-width: 120px; display: block; margin-bottom: 5px; }
     .painting { border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
     #adminContent { display: none; }
@@ -54,17 +55,12 @@ document.getElementById("loginBtn").onclick = () => {
   loadPaintings();
 };
 
-// Upload
 document.getElementById("uploadForm").onsubmit = async (e) => {
   e.preventDefault();
   const formData = new FormData(e.target);
   formData.append("password", adminPassword);
 
-  const res = await fetch("/paintings", {
-    method: "POST",
-    body: formData
-  });
-
+  const res = await fetch("/paintings", { method: "POST", body: formData });
   if (!res.ok) {
     const msg = await res.text();
     alert("Upload failed: " + msg);
@@ -76,7 +72,6 @@ document.getElementById("uploadForm").onsubmit = async (e) => {
   loadPaintings();
 };
 
-// Load paintings
 async function loadPaintings() {
   const res = await fetch("/paintings");
   const data = await res.json();
@@ -96,7 +91,6 @@ async function loadPaintings() {
   });
 }
 
-// Delete painting
 async function deletePainting(id) {
   if (!confirm("Delete this painting?")) return;
 
