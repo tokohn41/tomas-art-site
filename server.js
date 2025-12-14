@@ -94,7 +94,11 @@ app.post("/paintings", upload.single("image"), (req, res, next) => {
 
 // --- Get all paintings ---
 app.get("/paintings", (req, res) => {
-  db.all("SELECT * FROM paintings ORDER BY date DESC", [], (err, rows) => {
+  db.all(`
+  SELECT * FROM paintings
+  ORDER BY
+    substr(date, 7, 4) || '-' || substr(date, 1, 2) || '-' || substr(date, 4, 2) DESC
+`, [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows);
   });
