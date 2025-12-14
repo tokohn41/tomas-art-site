@@ -30,7 +30,6 @@
     <input name="date" placeholder="MM/DD/YYYY" required>
     <input name="materials" placeholder="Materials">
     <input name="location" placeholder="Current location">
-    <input name="category" placeholder="Category (Oil, Watercolor, etc)">
     <textarea name="description" placeholder="Description"></textarea>
     <input type="file" name="image" accept="image/*" required>
     <button type="submit">Upload Painting</button>
@@ -84,7 +83,7 @@ async function loadPaintings() {
     div.innerHTML = `
       <img src="${p.image_filename}" alt="${p.title}">
       <strong>${p.title}</strong><br>
-      ${p.date} – ${p.category || ""}<br>
+      ${p.date || ""}<br>
       <button onclick="deletePainting(${p.id})">Delete</button>
     `;
     container.appendChild(div);
