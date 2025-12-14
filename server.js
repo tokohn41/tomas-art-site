@@ -9,17 +9,17 @@ const path = require("path");
 const app = express();
 const db = new sqlite3.Database("paintings.db");
 
-// --- Environment ---
+// --- Environment variables ---
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "change-this";
 
-// --- Cloudinary ---
+// --- Cloudinary configuration ---
 cloudinary.config({
   cloud_name: process.env.CLOUD_NAME,
   api_key: process.env.CLOUD_API_KEY,
   api_secret: process.env.CLOUD_API_SECRET
 });
 
-// --- Multer Cloudinary storage ---
+// --- Multer storage for Cloudinary ---
 const storage = new CloudinaryStorage({
   cloudinary,
   params: {
