@@ -34,6 +34,25 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "public")));
 
+// --- Ensure table exists on startup ---
+db.serialize(() => {
+  db.run(`
+    CREATE TABLE IF NOT EXISTS paintings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT,
+      date TEXT,
+      materials TEXT,
+      location TEXT,
+      description TEXT,
+      image_filename TEXT,
+      cloudinary_id TEXT
+    )
+  `, (err) => {
+    if (err) console.error("Error creating table:", err.message);
+    else console.log("Table 'paintings' is ready.");
+  });
+});
+
 // --- Serve pages ---
 app.get("/", (req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
 app.get("/admin.html", (req, res) => res.sendFile(path.join(__dirname, "public", "admin.html")));
