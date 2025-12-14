@@ -6,18 +6,16 @@
   <style>
     body { font-family: Arial, sans-serif; max-width: 1000px; margin: auto; padding: 20px; }
     h1 { text-align: center; }
-    #search { margin-bottom: 20px; }
-    .painting { display: inline-block; width: 200px; margin: 10px; vertical-align: top; text-align: center; }
-    .painting img { max-width: 100%; height: auto; cursor: pointer; transition: transform 0.2s; }
-    .painting img:hover { transform: scale(1.05); }
-    #adminLink { display: block; margin: 20px 0; text-align: center; }
+    #search { width: 100%; padding: 10px; margin-bottom: 20px; font-size: 16px; }
+    #gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
+    .painting img { width: 100%; height: auto; border-radius: 5px; cursor: pointer; }
+    .painting { text-align: center; font-size: 14px; }
+    #adminLink { display: block; text-align: center; margin: 20px 0; font-weight: bold; }
   </style>
 </head>
 <body>
 
 <h1>Tomás’ Art Gallery</h1>
-
-<!-- Search -->
 <input type="text" id="search" placeholder="Search by title, description, or date">
 
 <div id="gallery"></div>
@@ -41,14 +39,13 @@ function displayPaintings(paintings) {
     div.innerHTML = `
       <img src="${p.image_filename}" alt="${p.title}">
       <strong>${p.title}</strong><br>
-      ${p.date}<br>
-      ${p.category || ""}
+      ${p.date} - ${p.category || ""}
     `;
     gallery.appendChild(div);
   });
 }
 
-// Search
+// Search functionality
 document.getElementById("search").addEventListener("input", async (e) => {
   const allPaintings = await loadPaintings();
   const q = e.target.value.toLowerCase();
