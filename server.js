@@ -34,7 +34,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "public")));
 
-// --- Ensure table exists on startup ---
+// --- Ensure table exists and has cloudinary_id ---
 db.serialize(() => {
   db.run(`
     CREATE TABLE IF NOT EXISTS paintings (
@@ -44,12 +44,24 @@ db.serialize(() => {
       materials TEXT,
       location TEXT,
       description TEXT,
-      image_filename TEXT,
-      cloudinary_id TEXT
+      image_filename TEXT
     )
   `, (err) => {
     if (err) console.error("Error creating table:", err.message);
-    else console.log("Table 'paintings' is ready.");
+    else console.log("Table 'paintings' exists.");
+  });
+
+  // Add cloudinary_id column if missing
+  db.run(`ALTER TABLE paintings ADD COLUMN cloudinary_id TEXT`, (err) => {
+    if (err) {
+      if (err.message.includes("duplicate column")) {
+        console.log("cloudinary_id column already exists");
+      } else {
+        console.error("Error adding cloudinary_id:", err.message);
+      }
+    } else {
+      console.log("cloudinary_id column added successfully");
+    }
   });
 });
 
