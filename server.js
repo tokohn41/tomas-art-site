@@ -4,6 +4,14 @@ const { CloudinaryStorage } = require("multer-storage-cloudinary");
 const cloudinary = require("cloudinary").v2;
 const sqlite3 = require("sqlite3").verbose();
 const app = express();
+const path = require("path");
+
+// Serve static files (HTML, CSS, JS)
+app.use(express.static(path.join(__dirname, "public")));
+
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
 
 // --- Database ---
 const db = new sqlite3.Database("./paintings.db");
