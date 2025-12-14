@@ -3,14 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <title>Tomás’ Art Gallery</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
   <style>
-    body { font-family: Arial, sans-serif; max-width: 1000px; margin: auto; padding: 20px; }
-    h1 { text-align: center; }
+    body { font-family: 'Roboto', sans-serif; max-width: 1000px; margin: auto; padding: 20px; }
+    h1 { text-align: center; margin-bottom: 20px; }
     #search { width: 100%; padding: 10px; margin-bottom: 20px; font-size: 16px; }
     #gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
-    .painting img { width: 100%; height: auto; border-radius: 5px; cursor: pointer; }
     .painting { text-align: center; font-size: 14px; }
+    .painting img { width: 100%; height: auto; border-radius: 5px; cursor: pointer; transition: transform 0.2s; }
+    .painting img:hover { transform: scale(1.05); }
     #adminLink { display: block; text-align: center; margin: 20px 0; font-weight: bold; }
+    #lightbox { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); display:none; align-items:center; justify-content:center; }
+    #lightbox img { max-width:90%; max-height:90%; border-radius:5px; }
   </style>
 </head>
 <body>
@@ -19,8 +23,9 @@
 <input type="text" id="search" placeholder="Search by title, description, or date">
 
 <div id="gallery"></div>
-
 <a id="adminLink" href="/admin.html">Admin Login</a>
+
+<div id="lightbox" onclick="this.style.display='none'"><img id="lightboxImg"></div>
 
 <script>
 async function loadPaintings() {
@@ -37,7 +42,7 @@ function displayPaintings(paintings) {
     const div = document.createElement("div");
     div.className = "painting";
     div.innerHTML = `
-      <img src="${p.image_filename}" alt="${p.title}">
+      <img src="${p.image_filename}" alt="${p.title}" onclick="showLightbox('${p.image_filename}')">
       <strong>${p.title}</strong><br>
       ${p.date} - ${p.category || ""}
     `;
@@ -45,7 +50,14 @@ function displayPaintings(paintings) {
   });
 }
 
-// Search functionality
+function showLightbox(src) {
+  const lightbox = document.getElementById("lightbox");
+  const img = document.getElementById("lightboxImg");
+  img.src = src;
+  lightbox.style.display = "flex";
+}
+
+// Search
 document.getElementById("search").addEventListener("input", async (e) => {
   const allPaintings = await loadPaintings();
   const q = e.target.value.toLowerCase();
