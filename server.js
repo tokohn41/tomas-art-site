@@ -9,7 +9,7 @@ const path = require("path");
 const app = express();
 const db = new sqlite3.Database("paintings.db");
 
-// --- Environment ---
+// --- Environment variables ---
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "change-this";
 
 // --- Cloudinary config ---
@@ -19,7 +19,7 @@ cloudinary.config({
   api_secret: process.env.CLOUD_API_SECRET
 });
 
-// --- Multer Cloudinary storage ---
+// --- Multer storage for Cloudinary ---
 const storage = new CloudinaryStorage({
   cloudinary,
   params: {
@@ -32,9 +32,9 @@ const upload = multer({ storage });
 // --- Middleware ---
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, "public"))); // serve index.html, admin.html
+app.use(express.static(path.join(__dirname, "public")));
 
-// --- Admin check middleware ---
+// --- Admin middleware ---
 function requireAdmin(req, res, next) {
   const pw = req.body.password || req.headers["x-admin-password"];
   if (pw === ADMIN_PASSWORD) next();
@@ -43,7 +43,7 @@ function requireAdmin(req, res, next) {
 
 // --- Routes ---
 
-// Home page
+// Serve homepage
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
@@ -60,16 +60,17 @@ app.post("/paintings", requireAdmin, upload.single("image"), (req, res) => {
   const { title, date, materials, location, description, category } = req.body;
   const cat = category?.trim() || "Uncategorized";
   const image_url = req.file.path; // Cloudinary URL
-  const public_id = req.file.filename; // save for deletion
+  const public_id = req.file.filename; // for deletion
 
-  const sql = `INSERT INTO paintings(title,date,materials,location,description,category,image_filename,cloudinary_id)
-               VALUES(?,?,?,?,?,?,?,?)`;
-  const params = [title||"", date||"", materials||"", location||"", description||"", cat, image_url, public_id];
-
-  db.run(sql, params, function(err) {
-    if (err) return res.status(500).send(err.message);
-    res.send("OK");
-  });
+  db.run(
+    `INSERT INTO paintings(title,date,materials,location,description,category,image_filename,cloudinary_id)
+     VALUES(?,?,?,?,?,?,?,?)`,
+    [title || "", date || "", materials || "", location || "", description || "", cat, image_url, public_id],
+    function(err) {
+      if (err) return res.status(500).send(err.message);
+      res.send("OK");
+    }
+  );
 });
 
 // Get all paintings
@@ -97,6 +98,6 @@ app.delete("/paintings/:id", requireAdmin, (req, res) => {
   });
 });
 
-// --- Start server ---
+// Start server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
