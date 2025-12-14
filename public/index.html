@@ -1,61 +1,68 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Tomás — Painting Archive</title>
-  <link rel="stylesheet" href="styles.css" />
+  <meta charset="UTF-8">
+  <title>Tomás’ Art Gallery</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 1000px; margin: auto; padding: 20px; }
+    h1 { text-align: center; }
+    #search { margin-bottom: 20px; }
+    .painting { display: inline-block; width: 200px; margin: 10px; vertical-align: top; text-align: center; }
+    .painting img { max-width: 100%; height: auto; cursor: pointer; transition: transform 0.2s; }
+    .painting img:hover { transform: scale(1.05); }
+    #adminLink { display: block; margin: 20px 0; text-align: center; }
+  </style>
 </head>
 <body>
-  <header class="site-header">
-    <h1 class="site-title">Tomás' Art Gallery</h1>
-    <div class="accent-line"></div>
-    <p class="tagline">Paintings from a life well-lived</p>
-  </header>
 
-  <div class="layout">
-    <section class="card narrow">
-      <h2>Search</h2>
-      <input id="search" type="text" placeholder="Search paintings...">
-      <h3 style="margin-top:12px;">Folders</h3>
-      <div id="category-buttons"></div>
-      <div style="margin-top:14px;"><a href="/admin">Admin panel</a></div>
-    </section>
+<h1>Tomás’ Art Gallery</h1>
 
-    <section class="card wide">
-      <h2>Gallery</h2>
-      <div id="gallery" class="gallery"></div>
-      <div id="no-results" class="muted" style="display:none;">No paintings found.</div>
-    </section>
-  </div>
+<!-- Search -->
+<input type="text" id="search" placeholder="Search by title, description, or date">
 
-  <section class="card" id="upload-section" style="display:none; max-width:900px; margin:20px auto;">
-    <h2>Add Painting (Admin)</h2>
-    <label>Title</label><input id="title" type="text">
-    <label>Date (MM/DD/YYYY)</label><input id="date" type="text">
-    <label>Materials</label><input id="materials" type="text">
-    <label>Location</label><input id="location" type="text">
-    <label>Description</label><textarea id="description"></textarea>
-    <label>Category</label><select id="category-select"></select>
-    <label>Image</label><input id="image" type="file" accept="image/*">
-    <div class="form-actions" style="margin-top:8px;">
-      <button id="upload-btn">Upload painting</button>
-      <span id="upload-msg" class="muted"></span>
-    </div>
-  </section>
+<div id="gallery"></div>
 
-  <div id="modal" class="modal" aria-hidden="true">
-    <div class="modal-content">
-      <button id="modal-close" class="modal-close" aria-label="Close">×</button>
-      <img id="modal-image" alt="Painting" />
-      <div id="modal-meta"></div>
-      <div id="admin-delete-area" style="margin-top:10px; display:none;">
-        <button id="modal-delete" class="danger">Delete painting</button>
-      </div>
-    </div>
-  </div>
+<a id="adminLink" href="/admin.html">Admin Login</a>
 
-  <script src="app.js"></script>
-  <a href="/admin.html">Admin Login</a>
+<script>
+async function loadPaintings() {
+  const res = await fetch("/paintings");
+  const data = await res.json();
+  return data;
+}
+
+function displayPaintings(paintings) {
+  const gallery = document.getElementById("gallery");
+  gallery.innerHTML = "";
+
+  paintings.forEach(p => {
+    const div = document.createElement("div");
+    div.className = "painting";
+    div.innerHTML = `
+      <img src="${p.image_filename}" alt="${p.title}">
+      <strong>${p.title}</strong><br>
+      ${p.date}<br>
+      ${p.category || ""}
+    `;
+    gallery.appendChild(div);
+  });
+}
+
+// Search
+document.getElementById("search").addEventListener("input", async (e) => {
+  const allPaintings = await loadPaintings();
+  const q = e.target.value.toLowerCase();
+  const filtered = allPaintings.filter(p =>
+    p.title.toLowerCase().includes(q) ||
+    (p.description && p.description.toLowerCase().includes(q)) ||
+    (p.date && p.date.toLowerCase().includes(q))
+  );
+  displayPaintings(filtered);
+});
+
+// Initial load
+loadPaintings().then(displayPaintings);
+</script>
+
 </body>
 </html>
