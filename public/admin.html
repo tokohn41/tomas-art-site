@@ -16,16 +16,13 @@
 
 <h1>Admin Panel</h1>
 
-<!-- Login -->
 <div id="loginArea">
   <input type="password" id="adminPassword" placeholder="Enter admin password">
   <button id="loginBtn">Login</button>
   <p id="loginMsg" style="color:red;"></p>
 </div>
 
-<!-- Admin Content -->
 <div id="adminContent">
-
   <h2>Add Painting</h2>
   <form id="uploadForm">
     <input name="title" placeholder="Title" required>
@@ -40,7 +37,6 @@
 
   <h2>Existing Paintings</h2>
   <div id="paintingsList"></div>
-
 </div>
 
 <script>
@@ -58,7 +54,7 @@ document.getElementById("loginBtn").onclick = () => {
   loadPaintings();
 };
 
-// Upload painting
+// Upload
 document.getElementById("uploadForm").onsubmit = async (e) => {
   e.preventDefault();
   const formData = new FormData(e.target);
