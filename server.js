@@ -9,17 +9,17 @@ const path = require("path");
 const app = express();
 const db = new sqlite3.Database("paintings.db");
 
-// --- Environment variables ---
+// --- Environment ---
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "change-this";
 
-// --- Cloudinary config ---
+// --- Cloudinary ---
 cloudinary.config({
   cloud_name: process.env.CLOUD_NAME,
   api_key: process.env.CLOUD_API_KEY,
   api_secret: process.env.CLOUD_API_SECRET
 });
 
-// --- Multer storage for Cloudinary ---
+// --- Multer Cloudinary storage ---
 const storage = new CloudinaryStorage({
   cloudinary,
   params: {
@@ -43,15 +43,11 @@ function requireAdmin(req, res, next) {
 
 // --- Routes ---
 
-// Serve homepage
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
-});
+// Home page
+app.get("/", (req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
 
-// Serve admin page
-app.get("/admin.html", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "admin.html"));
-});
+// Admin page
+app.get("/admin.html", (req, res) => res.sendFile(path.join(__dirname, "public", "admin.html")));
 
 // Upload painting
 app.post("/paintings", requireAdmin, upload.single("image"), (req, res) => {
@@ -59,8 +55,8 @@ app.post("/paintings", requireAdmin, upload.single("image"), (req, res) => {
 
   const { title, date, materials, location, description, category } = req.body;
   const cat = category?.trim() || "Uncategorized";
-  const image_url = req.file.path; // Cloudinary URL
-  const public_id = req.file.filename; // for deletion
+  const image_url = req.file.path;
+  const public_id = req.file.filename;
 
   db.run(
     `INSERT INTO paintings(title,date,materials,location,description,category,image_filename,cloudinary_id)
