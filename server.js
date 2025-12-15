@@ -69,7 +69,7 @@ app.get("/paintings", async (req, res) => {
         WHEN date IS NULL OR date = '' THEN 1
         ELSE 0
       END,
-      TO_DATE(date, 'MM/DD/YYYY') ASC
+      TO_DATE(date, 'MM/DD/YYYY') DESC
   `);
 
   res.json(result.rows);
