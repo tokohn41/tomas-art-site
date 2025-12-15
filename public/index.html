@@ -41,7 +41,7 @@ function displayPaintings(paintings) {
     const div = document.createElement("div");
     div.className = "painting";
     div.innerHTML = `
-      <img src="${p.image_filename}" alt="${p.title}" onclick="showLightbox('${p.image_filename}')">
+      <img src="${p.image_url}" alt="${p.title}" onclick="showLightbox('${p.image_url}')">
       <strong>${p.title}</strong><br>
       ${p.date || ""} 
     `;
