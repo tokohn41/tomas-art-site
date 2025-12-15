@@ -5,60 +5,47 @@
   <title>Admin – Tomás’ Art Gallery</title>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'Roboto', sans-serif; max-width: 800px; margin: auto; padding: 20px; }
+    body { font-family: Roboto, sans-serif; max-width: 800px; margin: auto; padding: 20px; }
     h1 { text-align: center; }
-    input, textarea, button { width: 100%; margin: 5px 0; padding: 8px; font-size: 14px; }
-    img { max-width: 120px; display: block; margin-bottom: 5px; }
-    .painting { border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
-    #adminContent { display: none; }
+    input, textarea, button {
+      width: 100%;
+      margin: 6px 0;
+      padding: 8px;
+      font-size: 14px;
+    }
+    img { max-width: 120px; display: block; margin-bottom: 6px; }
+    .painting {
+      border: 1px solid #ccc;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
   </style>
 </head>
 <body>
 
 <h1>Admin Panel</h1>
 
-<div id="loginArea">
-  <input type="password" id="password" placeholder="Enter admin password">
-  <button id="loginBtn">Login</button>
-  <p id="loginMsg" style="color:red;"></p>
-</div>
+<h2>Add Painting</h2>
 
-<div id="adminContent">
-  <h2>Add Painting</h2>
+<form id="uploadForm">
+  <input type="password" name="password" placeholder="Admin password" required>
 
-  <form id="uploadForm">
-    <!-- PASSWORD IS PART OF THE FORM -->
-    <input type="password" name="password" placeholder="Admin password" required>
+  <input name="title" placeholder="Title" required>
+  <input name="date" placeholder="MM/DD/YYYY" required>
+  <input name="materials" placeholder="Materials">
+  <input name="location" placeholder="Current location">
+  <textarea name="description" placeholder="Description"></textarea>
+  <input type="file" name="image" accept="image/*" required>
 
-    <input name="title" placeholder="Title" required>
-    <input name="date" placeholder="MM/DD/YYYY" required>
-    <input name="materials" placeholder="Materials">
-    <input name="location" placeholder="Current location">
-    <textarea name="description" placeholder="Description"></textarea>
-    <input type="file" name="image" accept="image/*" required>
+  <button type="submit">Upload Painting</button>
+</form>
 
-    <button type="submit">Upload Painting</button>
-  </form>
-
-  <h2>Existing Paintings</h2>
-  <div id="paintingsList"></div>
-</div>
+<h2>Existing Paintings</h2>
+<div id="paintingsList"></div>
 
 <script>
-document.getElementById("loginBtn").onclick = () => {
-  const pw = document.getElementById("password").value;
-  if (!pw) {
-    document.getElementById("loginMsg").innerText = "Enter password.";
-    return;
-  }
-  document.getElementById("loginArea").style.display = "none";
-  document.getElementById("adminContent").style.display = "block";
-  loadPaintings();
-};
-
 document.getElementById("uploadForm").onsubmit = async (e) => {
   e.preventDefault();
-
   const formData = new FormData(e.target);
 
   const res = await fetch("/paintings", {
@@ -71,7 +58,7 @@ document.getElementById("uploadForm").onsubmit = async (e) => {
     return;
   }
 
-  alert("Painting uploaded.");
+  alert("Uploaded");
   e.target.reset();
   loadPaintings();
 };
@@ -86,7 +73,7 @@ async function loadPaintings() {
     const div = document.createElement("div");
     div.className = "painting";
     div.innerHTML = `
-      <img src="${p.image_url}" alt="${p.title}">
+      <img src="${p.image_url}">
       <strong>${p.title}</strong><br>
       ${p.date || ""}<br>
       <button onclick="deletePainting(${p.id})">Delete</button>
@@ -96,7 +83,7 @@ async function loadPaintings() {
 }
 
 async function deletePainting(id) {
-  const password = prompt("Enter admin password to delete:");
+  const password = prompt("Admin password to delete:");
   if (!password) return;
 
   const res = await fetch("/paintings/" + id, {
@@ -111,6 +98,8 @@ async function deletePainting(id) {
 
   loadPaintings();
 }
+
+loadPaintings();
 </script>
 
 </body>
