@@ -1,36 +1,20 @@
 // server.js
-const express = require("express");
-const multer = require("multer");
-const cloudinary = require("cloudinary").v2;
-const { CloudinaryStorage } = require("multer-storage-cloudinary");
-const { Pool } = require("pg");
-const path = require("path");
+import express from "express";
+import multer from "multer";
+import { v2 as cloudinary } from "cloudinary";
+import { CloudinaryStorage } from "multer-storage-cloudinary";
+import { createClient } from "@supabase/supabase-js";
+import path from "path";
+import dotenv from "dotenv";
 
+dotenv.config();
 const app = express();
 
 // ===== Environment Variables =====
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "change-this";
 
-// ===== Supabase (Postgres) Connection =====
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
-});
-
-// Ensure paintings table exists
-pool.query(`
-  CREATE TABLE IF NOT EXISTS paintings (
-    id SERIAL PRIMARY KEY,
-    title TEXT,
-    date TEXT,
-    materials TEXT,
-    location TEXT,
-    description TEXT,
-    image_url TEXT,
-    cloudinary_id TEXT
-  )
-`).then(() => console.log("Supabase table 'paintings' ready"))
-  .catch(err => console.error("Error creating table:", err.message));
+// ===== Supabase Client =====
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
 // ===== Cloudinary Configuration =====
 cloudinary.config({
@@ -52,7 +36,7 @@ const upload = multer({ storage });
 // ===== Middleware =====
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static(path.join(path.resolve(), "public")));
 
 // ===== Admin Middleware =====
 function requireAdmin(req, res, next) {
@@ -72,12 +56,21 @@ app.post("/paintings", requireAdmin, upload.single("image"), async (req, res) =>
   const cloudinaryId = req.file.filename.split("/").pop();
 
   try {
-    const result = await pool.query(
-      `INSERT INTO paintings (title, date, materials, location, description, image_url, cloudinary_id)
-       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
-      [title || "", date || "", materials || "", location || "", description || "", imageUrl, cloudinaryId]
-    );
-    res.json(result.rows[0]);
+    const { data, error } = await supabase
+      .from("paintings")
+      .insert([{
+        title: title || "",
+        date: date || "",
+        materials: materials || "",
+        location: location || "",
+        description: description || "",
+        image_url: imageUrl,
+        cloudinary_id: cloudinaryId
+      }])
+      .select();
+
+    if (error) throw error;
+    res.json(data[0]);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
@@ -87,8 +80,13 @@ app.post("/paintings", requireAdmin, upload.single("image"), async (req, res) =>
 // Get all paintings (gallery)
 app.get("/paintings", async (req, res) => {
   try {
-    const result = await pool.query("SELECT * FROM paintings ORDER BY date DESC");
-    res.json(result.rows);
+    const { data, error } = await supabase
+      .from("paintings")
+      .select("*")
+      .order("date", { ascending: false });
+
+    if (error) throw error;
+    res.json(data);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
@@ -100,13 +98,25 @@ app.delete("/paintings/:id", requireAdmin, async (req, res) => {
   const id = req.params.id;
 
   try {
-    const result = await pool.query("SELECT cloudinary_id FROM paintings WHERE id=$1", [id]);
-    if (result.rows.length === 0) return res.status(404).json({ error: "Painting not found" });
+    // Get painting
+    const { data, error: fetchError } = await supabase
+      .from("paintings")
+      .select("cloudinary_id")
+      .eq("id", id)
+      .single();
 
-    const cloudId = result.rows[0].cloudinary_id;
-    await cloudinary.uploader.destroy(`tomas-art-site/${cloudId}`);
+    if (fetchError || !data) return res.status(404).json({ error: "Painting not found" });
 
-    await pool.query("DELETE FROM paintings WHERE id=$1", [id]);
+    // Delete from Cloudinary
+    await cloudinary.uploader.destroy(`tomas-art-site/${data.cloudinary_id}`);
+
+    // Delete from Supabase
+    const { error: deleteError } = await supabase
+      .from("paintings")
+      .delete()
+      .eq("id", id);
+
+    if (deleteError) throw deleteError;
     res.json({ success: true });
   } catch (err) {
     console.error(err);
