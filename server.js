@@ -12,9 +12,21 @@ const app = express();
 
 // ===== Environment Variables =====
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "change-this";
+const NODE_ENV = process.env.NODE_ENV || "development";
+const SESSION_SECRET = process.env.SESSION_SECRET || "change-this";
 
-// ===== Supabase Client =====
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+// ===== Supabase Client (using DATABASE_URL if you must) =====
+// Recommended: create SUPABASE_URL and SUPABASE_KEY instead of using DATABASE_URL.
+// Example:
+// const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+
+// If you only have DATABASE_URL, you can use pg (but will require SSL):
+import pkg from "pg";
+const { Pool } = pkg;
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
+});
 
 // ===== Cloudinary Configuration =====
 cloudinary.config({
@@ -56,37 +68,23 @@ app.post("/paintings", requireAdmin, upload.single("image"), async (req, res) =>
   const cloudinaryId = req.file.filename.split("/").pop();
 
   try {
-    const { data, error } = await supabase
-      .from("paintings")
-      .insert([{
-        title: title || "",
-        date: date || "",
-        materials: materials || "",
-        location: location || "",
-        description: description || "",
-        image_url: imageUrl,
-        cloudinary_id: cloudinaryId
-      }])
-      .select();
-
-    if (error) throw error;
-    res.json(data[0]);
+    const result = await pool.query(
+      `INSERT INTO paintings (title, date, materials, location, description, image_url, cloudinary_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+      [title || "", date || "", materials || "", location || "", description || "", imageUrl, cloudinaryId]
+    );
+    res.json(result.rows[0]);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// Get all paintings (gallery)
+// Get all paintings
 app.get("/paintings", async (req, res) => {
   try {
-    const { data, error } = await supabase
-      .from("paintings")
-      .select("*")
-      .order("date", { ascending: false });
-
-    if (error) throw error;
-    res.json(data);
+    const result = await pool.query("SELECT * FROM paintings ORDER BY date DESC");
+    res.json(result.rows);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
@@ -98,25 +96,13 @@ app.delete("/paintings/:id", requireAdmin, async (req, res) => {
   const id = req.params.id;
 
   try {
-    // Get painting
-    const { data, error: fetchError } = await supabase
-      .from("paintings")
-      .select("cloudinary_id")
-      .eq("id", id)
-      .single();
+    const result = await pool.query("SELECT cloudinary_id FROM paintings WHERE id=$1", [id]);
+    if (result.rows.length === 0) return res.status(404).json({ error: "Painting not found" });
 
-    if (fetchError || !data) return res.status(404).json({ error: "Painting not found" });
+    const cloudId = result.rows[0].cloudinary_id;
+    await cloudinary.uploader.destroy(`tomas-art-site/${cloudId}`);
 
-    // Delete from Cloudinary
-    await cloudinary.uploader.destroy(`tomas-art-site/${data.cloudinary_id}`);
-
-    // Delete from Supabase
-    const { error: deleteError } = await supabase
-      .from("paintings")
-      .delete()
-      .eq("id", id);
-
-    if (deleteError) throw deleteError;
+    await pool.query("DELETE FROM paintings WHERE id=$1", [id]);
     res.json({ success: true });
   } catch (err) {
     console.error(err);
