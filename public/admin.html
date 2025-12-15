@@ -19,34 +19,62 @@
       padding: 10px;
       margin-bottom: 10px;
     }
+    #adminContent { display: none; }
   </style>
 </head>
 <body>
 
 <h1>Admin Panel</h1>
 
-<h2>Add Painting</h2>
+<!-- LOGIN -->
+<div id="login">
+  <input type="password" id="passwordInput" placeholder="Admin password">
+  <button id="loginBtn">Enter</button>
+  <p id="loginMsg" style="color:red;"></p>
+</div>
 
-<form id="uploadForm">
-  <input type="password" name="password" placeholder="Admin password" required>
+<!-- ADMIN CONTENT -->
+<div id="adminContent">
 
-  <input name="title" placeholder="Title" required>
-  <input name="date" placeholder="MM/DD/YYYY" required>
-  <input name="materials" placeholder="Materials">
-  <input name="location" placeholder="Current location">
-  <textarea name="description" placeholder="Description"></textarea>
-  <input type="file" name="image" accept="image/*" required>
+  <h2>Add Painting</h2>
 
-  <button type="submit">Upload Painting</button>
-</form>
+  <form id="uploadForm">
+    <input name="title" placeholder="Title" required>
+    <input name="date" placeholder="MM/DD/YYYY" required>
+    <input name="materials" placeholder="Materials">
+    <input name="location" placeholder="Current location">
+    <textarea name="description" placeholder="Description"></textarea>
+    <input type="file" name="image" accept="image/*" required>
+    <button type="submit">Upload Painting</button>
+  </form>
 
-<h2>Existing Paintings</h2>
-<div id="paintingsList"></div>
+  <h2>Existing Paintings</h2>
+  <div id="paintingsList"></div>
+</div>
 
 <script>
+let adminPassword = "";
+
+/* ===== LOGIN ===== */
+document.getElementById("loginBtn").onclick = () => {
+  const pw = document.getElementById("passwordInput").value;
+  if (!pw) {
+    document.getElementById("loginMsg").innerText = "Enter password.";
+    return;
+  }
+
+  adminPassword = pw;
+  document.getElementById("login").style.display = "none";
+  document.getElementById("adminContent").style.display = "block";
+  loadPaintings();
+};
+
+/* ===== UPLOAD ===== */
 document.getElementById("uploadForm").onsubmit = async (e) => {
   e.preventDefault();
+
   const formData = new FormData(e.target);
+  formData.append("password", adminPassword);
 
   const res = await fetch("/paintings", {
     method: "POST",
@@ -63,6 +91,7 @@ document.getElementById("uploadForm").onsubmit = async (e) => {
   loadPaintings();
 };
 
+/* ===== LOAD GALLERY ===== */
 async function loadPaintings() {
   const res = await fetch("/paintings");
   const data = await res.json();
@@ -82,13 +111,13 @@ async function loadPaintings() {
   });
 }
 
+/* ===== DELETE ===== */
 async function deletePainting(id) {
-  const password = prompt("Admin password to delete:");
-  if (!password) return;
+  if (!confirm("Delete this painting?")) return;
 
   const res = await fetch("/paintings/" + id, {
     method: "DELETE",
-    headers: { "x-admin-password": password }
+    headers: { "x-admin-password": adminPassword }
   });
 
   if (!res.ok) {
@@ -98,8 +127,6 @@ async function deletePainting(id) {
 
   loadPaintings();
 }
-
-loadPaintings();
 </script>
 
 </body>
