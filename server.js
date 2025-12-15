@@ -8,41 +8,17 @@ const path = require("path");
 const app = express();
 
 /* =====================
-   ENVIRONMENT
+   ENV
 ===================== */
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const DATABASE_URL = process.env.DATABASE_URL;
-
-if (!DATABASE_URL) {
-  console.error("DATABASE_URL is missing");
-  process.exit(1);
-}
 
 /* =====================
    DATABASE (SUPABASE)
 ===================== */
 const pool = new Pool({
   connectionString: DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
-  family: 4   // 👈 FORCE IPv4 (CRITICAL FIX)
-});
-
-pool.query(`
-  CREATE TABLE IF NOT EXISTS paintings (
-    id SERIAL PRIMARY KEY,
-    title TEXT,
-    date TEXT,
-    materials TEXT,
-    location TEXT,
-    description TEXT,
-    image_url TEXT,
-    cloudinary_id TEXT
-  )
-`).then(() => {
-  console.log("Database ready");
-}).catch(err => {
-  console.error("Database error:", err);
-  process.exit(1);
+  ssl: { rejectUnauthorized: false }
 });
 
 /* =====================
@@ -61,7 +37,6 @@ const storage = new CloudinaryStorage({
     allowed_formats: ["jpg", "jpeg", "png"]
   }
 });
-
 const upload = multer({ storage });
 
 /* =====================
@@ -75,8 +50,7 @@ app.use(express.static(path.join(__dirname, "public")));
    AUTH
 ===================== */
 function requireAdmin(req, res, next) {
-  const pw = req.body.password || req.headers["x-admin-password"];
-  if (pw === ADMIN_PASSWORD) return next();
+  if (req.body.password === ADMIN_PASSWORD) return next();
   res.status(401).send("Not authorized");
 }
 
@@ -84,17 +58,15 @@ function requireAdmin(req, res, next) {
    ROUTES
 ===================== */
 
-// Gallery data
+// Gallery
 app.get("/paintings", async (req, res) => {
-  const result = await pool.query(`
-    SELECT * FROM paintings
-    ORDER BY
-      substr(date,7,4) || substr(date,1,2) || substr(date,4,2) DESC
-  `);
+  const result = await pool.query(
+    "SELECT * FROM paintings ORDER BY date DESC"
+  );
   res.json(result.rows);
 });
 
-// Upload painting
+// Upload
 app.post("/paintings", requireAdmin, upload.single("image"), async (req, res) => {
   if (!req.file) return res.status(400).send("Image required");
 
@@ -118,8 +90,12 @@ app.post("/paintings", requireAdmin, upload.single("image"), async (req, res) =>
   res.send("OK");
 });
 
-// Delete painting
-app.delete("/paintings/:id", requireAdmin, async (req, res) => {
+// Delete
+app.delete("/paintings/:id", async (req, res) => {
+  if (req.headers["x-admin-password"] !== ADMIN_PASSWORD) {
+    return res.status(401).send("Not authorized");
+  }
+
   const id = req.params.id;
 
   const result = await pool.query(
@@ -141,9 +117,9 @@ app.delete("/paintings/:id", requireAdmin, async (req, res) => {
 });
 
 /* =====================
-   START SERVER
+   START
 ===================== */
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log("Server running");
 });
