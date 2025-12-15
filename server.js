@@ -8,7 +8,7 @@ const path = require("path");
 const app = express();
 
 /* =====================
-   ENV
+   ENVIRONMENT
 ===================== */
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const DATABASE_URL = process.env.DATABASE_URL;
@@ -47,10 +47,11 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "public")));
 
 /* =====================
-   AUTH
+   ADMIN AUTH
 ===================== */
 function requireAdmin(req, res, next) {
-  if (req.body.password === ADMIN_PASSWORD) return next();
+  const pw = req.body.password || req.headers["x-admin-password"];
+  if (pw === ADMIN_PASSWORD) return next();
   res.status(401).send("Not authorized");
 }
 
@@ -58,7 +59,7 @@ function requireAdmin(req, res, next) {
    ROUTES
 ===================== */
 
-// Gallery
+// Fetch gallery
 app.get("/paintings", async (req, res) => {
   const result = await pool.query(
     "SELECT * FROM paintings ORDER BY date DESC"
@@ -66,31 +67,36 @@ app.get("/paintings", async (req, res) => {
   res.json(result.rows);
 });
 
-// Upload
-app.post("/paintings", requireAdmin, upload.single("image"), async (req, res) => {
-  if (!req.file) return res.status(400).send("Image required");
+// Upload painting (IMPORTANT: multer BEFORE auth)
+app.post(
+  "/paintings",
+  upload.single("image"),
+  requireAdmin,
+  async (req, res) => {
+    if (!req.file) return res.status(400).send("Image required");
 
-  const { title, date, materials, location, description } = req.body;
+    const { title, date, materials, location, description } = req.body;
 
-  await pool.query(
-    `INSERT INTO paintings
-     (title, date, materials, location, description, image_url, cloudinary_id)
-     VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-    [
-      title || "",
-      date || "",
-      materials || "",
-      location || "",
-      description || "",
-      req.file.path,
-      req.file.filename.split("/").pop()
-    ]
-  );
+    await pool.query(
+      `INSERT INTO paintings
+       (title, date, materials, location, description, image_url, cloudinary_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+      [
+        title || "",
+        date || "",
+        materials || "",
+        location || "",
+        description || "",
+        req.file.path,
+        req.file.filename.split("/").pop()
+      ]
+    );
 
-  res.send("OK");
-});
+    res.send("OK");
+  }
+);
 
-// Delete
+// Delete painting
 app.delete("/paintings/:id", async (req, res) => {
   if (req.headers["x-admin-password"] !== ADMIN_PASSWORD) {
     return res.status(401).send("Not authorized");
@@ -117,7 +123,7 @@ app.delete("/paintings/:id", async (req, res) => {
 });
 
 /* =====================
-   START
+   START SERVER
 ===================== */
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
