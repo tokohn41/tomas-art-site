@@ -18,20 +18,25 @@
 <h1>Admin Panel</h1>
 
 <div id="loginArea">
-  <input type="password" id="adminPassword" placeholder="Enter admin password">
+  <input type="password" id="password" placeholder="Enter admin password">
   <button id="loginBtn">Login</button>
   <p id="loginMsg" style="color:red;"></p>
 </div>
 
 <div id="adminContent">
   <h2>Add Painting</h2>
+
   <form id="uploadForm">
+    <!-- PASSWORD IS PART OF THE FORM -->
+    <input type="password" name="password" placeholder="Admin password" required>
+
     <input name="title" placeholder="Title" required>
     <input name="date" placeholder="MM/DD/YYYY" required>
     <input name="materials" placeholder="Materials">
     <input name="location" placeholder="Current location">
     <textarea name="description" placeholder="Description"></textarea>
     <input type="file" name="image" accept="image/*" required>
+
     <button type="submit">Upload Painting</button>
   </form>
 
@@ -40,15 +45,12 @@
 </div>
 
 <script>
-let adminPassword = "";
-
 document.getElementById("loginBtn").onclick = () => {
-  const pw = document.getElementById("adminPassword").value;
+  const pw = document.getElementById("password").value;
   if (!pw) {
     document.getElementById("loginMsg").innerText = "Enter password.";
     return;
   }
-  adminPassword = pw;
   document.getElementById("loginArea").style.display = "none";
   document.getElementById("adminContent").style.display = "block";
   loadPaintings();
@@ -56,13 +58,16 @@ document.getElementById("loginBtn").onclick = () => {
 
 document.getElementById("uploadForm").onsubmit = async (e) => {
   e.preventDefault();
-  const formData = new FormData(e.target);
-  formData.append("password", adminPassword);
 
-  const res = await fetch("/paintings", { method: "POST", body: formData });
+  const formData = new FormData(e.target);
+
+  const res = await fetch("/paintings", {
+    method: "POST",
+    body: formData
+  });
+
   if (!res.ok) {
-    const msg = await res.text();
-    alert("Upload failed: " + msg);
+    alert("Upload failed: " + await res.text());
     return;
   }
 
@@ -81,7 +86,7 @@ async function loadPaintings() {
     const div = document.createElement("div");
     div.className = "painting";
     div.innerHTML = `
-      <img src="${p.image_filename}" alt="${p.title}">
+      <img src="${p.image_url}" alt="${p.title}">
       <strong>${p.title}</strong><br>
       ${p.date || ""}<br>
       <button onclick="deletePainting(${p.id})">Delete</button>
@@ -91,16 +96,16 @@ async function loadPaintings() {
 }
 
 async function deletePainting(id) {
-  if (!confirm("Delete this painting?")) return;
+  const password = prompt("Enter admin password to delete:");
+  if (!password) return;
 
   const res = await fetch("/paintings/" + id, {
     method: "DELETE",
-    headers: { "x-admin-password": adminPassword }
+    headers: { "x-admin-password": password }
   });
 
   if (!res.ok) {
-    const msg = await res.text();
-    alert("Delete failed: " + msg);
+    alert("Delete failed: " + await res.text());
     return;
   }
 
