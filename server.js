@@ -61,9 +61,17 @@ function requireAdmin(req, res, next) {
 
 // Fetch gallery
 app.get("/paintings", async (req, res) => {
-  const result = await pool.query(
-    "SELECT * FROM paintings ORDER BY date DESC"
-  );
+  const result = await pool.query(`
+    SELECT *
+    FROM paintings
+    ORDER BY
+      CASE
+        WHEN date IS NULL OR date = '' THEN 1
+        ELSE 0
+      END,
+      TO_DATE(date, 'MM/DD/YYYY') ASC
+  `);
+
   res.json(result.rows);
 });
 
