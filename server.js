@@ -3,23 +3,43 @@ const express = require("express");
 const multer = require("multer");
 const cloudinary = require("cloudinary").v2;
 const { CloudinaryStorage } = require("multer-storage-cloudinary");
-const sqlite3 = require("sqlite3").verbose();
+const { Pool } = require("pg");
 const path = require("path");
 
 const app = express();
-const db = new sqlite3.Database("paintings.db");
 
-// --- Environment variables ---
+// ===== Environment Variables =====
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "change-this";
 
-// --- Cloudinary configuration ---
+// ===== Supabase (Postgres) Connection =====
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
+});
+
+// Ensure paintings table exists
+pool.query(`
+  CREATE TABLE IF NOT EXISTS paintings (
+    id SERIAL PRIMARY KEY,
+    title TEXT,
+    date TEXT,
+    materials TEXT,
+    location TEXT,
+    description TEXT,
+    image_url TEXT,
+    cloudinary_id TEXT
+  )
+`).then(() => console.log("Supabase table 'paintings' ready"))
+  .catch(err => console.error("Error creating table:", err.message));
+
+// ===== Cloudinary Configuration =====
 cloudinary.config({
   cloud_name: process.env.CLOUD_NAME,
   api_key: process.env.CLOUD_API_KEY,
   api_secret: process.env.CLOUD_API_SECRET
 });
 
-// --- Multer storage for Cloudinary ---
+// ===== Multer + Cloudinary Storage =====
 const storage = new CloudinaryStorage({
   cloudinary,
   params: {
@@ -29,102 +49,71 @@ const storage = new CloudinaryStorage({
 });
 const upload = multer({ storage });
 
-// --- Middleware ---
+// ===== Middleware =====
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "public")));
 
-// --- Ensure table exists and has cloudinary_id ---
-db.serialize(() => {
-  db.run(`
-    CREATE TABLE IF NOT EXISTS paintings (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      title TEXT,
-      date TEXT,
-      materials TEXT,
-      location TEXT,
-      description TEXT,
-      image_filename TEXT
-    )
-  `, (err) => {
-    if (err) console.error("Error creating table:", err.message);
-    else console.log("Table 'paintings' exists.");
-  });
-
-  // Add cloudinary_id column if missing
-  db.run(`ALTER TABLE paintings ADD COLUMN cloudinary_id TEXT`, (err) => {
-    if (err) {
-      if (err.message.includes("duplicate column")) {
-        console.log("cloudinary_id column already exists");
-      } else {
-        console.error("Error adding cloudinary_id:", err.message);
-      }
-    } else {
-      console.log("cloudinary_id column added successfully");
-    }
-  });
-});
-
-// --- Serve pages ---
-app.get("/", (req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
-app.get("/admin.html", (req, res) => res.sendFile(path.join(__dirname, "public", "admin.html")));
-
-// --- Upload painting ---
-app.post("/paintings", upload.single("image"), (req, res, next) => {
+// ===== Admin Middleware =====
+function requireAdmin(req, res, next) {
   const pw = req.body.password || req.headers["x-admin-password"];
-  if (pw === ADMIN_PASSWORD) return next();
-  else return res.status(401).send("Not authorized");
-}, (req, res) => {
-  if (!req.file) return res.status(400).send("No file uploaded");
+  if (pw === ADMIN_PASSWORD) next();
+  else res.status(401).send("Not authorized");
+}
+
+// ===== Routes =====
+
+// Upload painting
+app.post("/paintings", requireAdmin, upload.single("image"), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: "Image required" });
 
   const { title, date, materials, location, description } = req.body;
-  const image_url = req.file.path;
-  const public_id = req.file.filename;
+  const imageUrl = req.file.path; // Cloudinary URL
+  const cloudinaryId = req.file.filename.split("/").pop();
 
-  db.run(
-    `INSERT INTO paintings(title,date,materials,location,description,image_filename,cloudinary_id)
-     VALUES(?,?,?,?,?,?,?)`,
-    [title || "", date || "", materials || "", location || "", description || "", image_url, public_id],
-    function(err) {
-      if (err) return res.status(500).send(err.message);
-      res.send("OK");
-    }
-  );
+  try {
+    const result = await pool.query(
+      `INSERT INTO paintings (title, date, materials, location, description, image_url, cloudinary_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+      [title || "", date || "", materials || "", location || "", description || "", imageUrl, cloudinaryId]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// --- Get all paintings ---
-app.get("/paintings", (req, res) => {
-  db.all(`
-  SELECT * FROM paintings
-  ORDER BY
-    substr(date, 7, 4) || '-' || substr(date, 1, 2) || '-' || substr(date, 4, 2) DESC
-`, [], (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(rows);
-  });
+// Get all paintings (gallery)
+app.get("/paintings", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT * FROM paintings ORDER BY date DESC");
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// --- Delete painting ---
-app.delete("/paintings/:id", upload.none(), (req, res, next) => {
-  const pw = req.headers["x-admin-password"] || req.body.password;
-  if (pw === ADMIN_PASSWORD) return next();
-  else return res.status(401).send("Not authorized");
-}, (req, res) => {
+// Delete a painting
+app.delete("/paintings/:id", requireAdmin, async (req, res) => {
   const id = req.params.id;
-  db.get("SELECT cloudinary_id FROM paintings WHERE id = ?", [id], (err, row) => {
-    if (err || !row) return res.status(404).json({ error: "Painting not found" });
 
-    cloudinary.uploader.destroy(`tomas-art-site/${row.cloudinary_id}`, (err) => {
-      if (err) console.error("Cloudinary delete failed:", err);
+  try {
+    const result = await pool.query("SELECT cloudinary_id FROM paintings WHERE id=$1", [id]);
+    if (result.rows.length === 0) return res.status(404).json({ error: "Painting not found" });
 
-      db.run("DELETE FROM paintings WHERE id = ?", [id], function(err) {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ success: true });
-      });
-    });
-  });
+    const cloudId = result.rows[0].cloudinary_id;
+    await cloudinary.uploader.destroy(`tomas-art-site/${cloudId}`);
+
+    await pool.query("DELETE FROM paintings WHERE id=$1", [id]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// --- Start server ---
+// ===== Start Server =====
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
