@@ -23,7 +23,8 @@ if (!DATABASE_URL) {
 ===================== */
 const pool = new Pool({
   connectionString: DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
+  ssl: { rejectUnauthorized: false },
+  family: 4   // 👈 FORCE IPv4 (CRITICAL FIX)
 });
 
 pool.query(`
